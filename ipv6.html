@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生成IPv6地址</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    color: #333;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  h1, h3 {
+    color: #007BFF;
+    margin-bottom: 20px;
+  }
+  .container {
+    margin-bottom: 20px;
+  }
+  .input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  label {
+    margin-bottom: 5px;
+  }
+  input[type="text"], input[type="number"] {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 80%;
+    max-width: 400px;
+    margin-bottom: 10px;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    color: #fff;
+    background-color: #007BFF;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-bottom: 10px;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  #ipv6-result {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px;
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 80%;
+    max-width: 600px;
+    word-break: break-all;
+    margin: 20px auto;
+  }
+</style>
+</head>
+<body>
+  <h1>生成具有相同前缀的IPv6地址</h1>
+  <h3>并转化为shell指令</h3>
+  <div class="input-container">
+    <label for="ipv6-address">IPv6/64地址：</label>
+    <input type="text" id="ipv6-address" placeholder="例：2001:0db8:85a3:0000:0000:0000:0000:0000/64">
+  </div>
+  <div class="input-container">
+    <label for="quantity">生成数量：</label>
+    <input type="number" id="quantity" min="1" value="1">
+  </div>
+  <div class="input-container">
+    <label for="interface-name">网卡名称：</label>
+    <input type="text" id="interface-name" placeholder="例：eth0">
+  </div>
+  <div class="container">
+    <button onclick="generateIPv6Addresses()">生成Shell指令</button>
+    <button onclick="copyToClipboard()">复制到剪切板</button>
+  </div>
+  <div id="ipv6-result"></div>
+
+  <script>
+    function generateIPv6Addresses() {
+      const addressInput = document.getElementById('ipv6-address').value;
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const interfaceName = document.getElementById('interface-name').value;
+      const resultArea = document.getElementById('ipv6-result');
+      resultArea.innerHTML = '';
+
+      // 验证IPv6地址格式（带子网长度）
+      const addressPattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\/64$/;
+      if (!addressPattern.test(addressInput)) {
+        alert('请输入有效的完整IPv6/64地址，例如：2001:0db8:85a3:0000:0000:0000:0000:0000/64');
+        return;
+      }
+
+      if (!interfaceName) {
+        alert('请输入有效的网卡名称，例如：eth0');
+        return;
+      }
+
+      // 分割地址和子网长度
+      const [address, subnet] = addressInput.split('/');
+      const segments = address.split(':');
+      const prefixSegments = segments.slice(0, 4).join(':');
+      
+      let commands = '';
+      for (let i = 0; i < quantity; i++) {
+        let ipv6Address = prefixSegments + ':';
+        // 生成后64位的16进制数字，每组4个字符
+        for (let j = 0; j < 4; j++) {
+          let hexGroup = '';
+          for (let k = 0; k < 4; k++) {
+            hexGroup += Math.floor(Math.random() * 16).toString(16);
+          }
+          ipv6Address += hexGroup;
+          if (j < 3) ipv6Address += ':';
+        }
+        // 添加子网长度
+        ipv6Address += `/${subnet}`;
+        // 生成Shell指令
+        const shellCommand = `sudo ip addr add ${ipv6Address} dev ${interfaceName}`;
+        // 拼接命令
+        commands += shellCommand + '; ';
+      }
+      // 在页面上显示生成的Shell指令
+      resultArea.textContent = commands;
+    }
+
+    function copyToClipboard() {
+      const resultArea = document.getElementById('ipv6-result');
+      const text = resultArea.textContent;
+
+      if (!text) {
+        alert('没有内容可复制，请先生成Shell指令。');
+        return;
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('内容已复制到剪切板。');
+      }).catch(err => {
+        alert('复制失败，请重试。');
+      });
+    }
+  </script>
+</body>
+</html>
